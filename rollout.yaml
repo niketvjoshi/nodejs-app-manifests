@@ -21,6 +21,8 @@ spec:
           env:
             - name: APP_VERSION
               value: "v1"
+            - name: env
+              value: "staging"
           readinessProbe:
             httpGet:
               path: /health
