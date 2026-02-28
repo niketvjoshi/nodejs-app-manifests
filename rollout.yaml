@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: nodejs-app
+  namespace: nodejs-app
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: nodejs-app
+  template:
+    metadata:
+      labels:
+        app: nodejs-app
+    spec:
+      containers:
+        - name: nodejs-app
+          image: 196549506578.dkr.ecr.ap-south-1.amazonaws.com/nodejs-app:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: APP_VERSION
+              value: "v1"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+  strategy:
+    canary:
+      # These two services are managed by Argo Rollouts
+      stableService: nodejs-app-stable
+      canaryService: nodejs-app-canary
+      trafficRouting:
+        alb:
+          ingress: nodejs-app
+          servicePort: 80
+      steps:
+        - setWeight: 10        # Send 10% traffic to canary
+        - pause: {duration: 2m}
+        - setWeight: 50        # Send 50% traffic to canary
+        - pause: {duration: 2m}
+        - setWeight: 100       # Full rollout
